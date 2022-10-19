@@ -1,4 +1,10 @@
 # Changelog
+## 0.3.0
+
+- add simple certificate verification logic
+- add support for certificate revocation lists
+- bugfixes
+
 ## 0.2.10
 
 - Removed distribution points implementation.

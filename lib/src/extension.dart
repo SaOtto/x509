@@ -17,8 +17,13 @@ class Extension {
   /// The extension's value.
   final ExtensionValue extnValue;
 
+  final List<int> extensionValueOctet;
+
   const Extension(
-      {required this.extnId, this.isCritical = false, required this.extnValue});
+      {required this.extnId,
+      this.isCritical = false,
+      required this.extnValue,
+      required this.extensionValueOctet});
 
   /// Creates a Extension from an [ASN1Sequence].
   ///
@@ -43,6 +48,7 @@ class Extension {
     return Extension(
         extnId: id,
         isCritical: critical,
+        extensionValueOctet: sequence.elements[octetIndex].contentBytes()!,
         extnValue: ExtensionValue.fromAsn1(
             ASN1Parser(sequence.elements[octetIndex].contentBytes()!)
                 .nextObject(),
@@ -55,6 +61,16 @@ class Extension {
     buffer.writeln("${prefix}$extnId: ${isCritical ? "critical" : ""}");
     buffer.writeln('${prefix}\t$extnValue');
     return buffer.toString();
+  }
+
+  ASN1Sequence toAsn1() {
+    var seq = ASN1Sequence();
+    seq.add(fromDart(extnId));
+    if (isCritical) {
+      seq.add(fromDart(true));
+    }
+    seq.add(ASN1OctetString(extensionValueOctet));
+    return seq;
   }
 }
 
@@ -108,11 +124,9 @@ abstract class ExtensionValue {
     }
     if (id == xId) {
       return UnknownExtension.fromAsn1(obj);
-    }
-    else
+    } else {
       return UnknownExtension.fromAsn1(obj);
-    throw UnimplementedError(
-        'Cannot handle $id (${id.parent} ${id.nodes.last})');
+    }
   }
 }
 
@@ -317,7 +331,7 @@ class PrivateKeyUsagePeriod extends ExtensionValue {
   factory PrivateKeyUsagePeriod.fromAsn1(ASN1Sequence sequence) {
     var notBefore;
     var notAfter;
-    for (ASN1Object o in sequence.elements) {
+    for (var o in sequence.elements) {
       if (o is ASN1Object) {
         var taggedObject = o;
         if (taggedObject.tag == 128) {
@@ -554,12 +568,18 @@ class CrlDistributionPoints extends ExtensionValue {
         DistributionPoint.fromAsn1(e as ASN1Sequence)
     ]);
   }
+
+  @override
+  String toString() {
+    // TODO: implement toString
+    return points.toString();
+  }
 }
 
 class DistributionPoint {
-  final String? name;
+  final DistributionPointName? name;
   final List<DistributionPointReason>? reasons;
-  final String? crlIssuer;
+  final GeneralName? crlIssuer;
 
   DistributionPoint({this.name, this.reasons, this.crlIssuer});
 
@@ -570,8 +590,65 @@ class DistributionPoint {
   ///     reasons                 [1]     ReasonFlags OPTIONAL,
   ///     cRLIssuer               [2]     GeneralNames OPTIONAL }
   factory DistributionPoint.fromAsn1(ASN1Sequence sequence) {
-    // TODO Implement the correct behaviour here. We ignore it for now.
-    return DistributionPoint();
+    DistributionPointName? tmpName;
+    GeneralName? tmpIssuer;
+    for (var entry in sequence.elements) {
+      switch (entry.tag) {
+        case 0xa0:
+          //DistributionPointName
+          var decoded = ASN1Parser(entry.valueBytes()).nextObject();
+          tmpName = DistributionPointName.fromAsn1(decoded);
+          break;
+        case 0xa1:
+          //TODO parse reasons
+          break;
+        case 0xa2:
+          var decoded =
+              ASN1Parser(entry.valueBytes()).nextObject() as ASN1Sequence;
+          tmpIssuer = GeneralName.fromAsn1(decoded);
+          break;
+        default:
+          throw Exception('Unknown Tag');
+      }
+    }
+    return DistributionPoint(name: tmpName, crlIssuer: tmpIssuer);
+  }
+
+  @override
+  String toString() {
+    return 'name: $name, reasons: $reasons, issuer: $crlIssuer';
+  }
+}
+
+class DistributionPointName {
+  GeneralName? fullName;
+  Name? nameRelativeToCRLIssuer;
+
+  DistributionPointName({this.fullName, this.nameRelativeToCRLIssuer});
+
+  factory DistributionPointName.fromAsn1(ASN1Object sequence) {
+    if (sequence.tag == 0xa0) {
+      return DistributionPointName(
+          fullName: GeneralName.fromAsn1(
+              ASN1Parser(sequence.valueBytes()).nextObject()));
+    } else if (sequence.tag == 0xa1) {
+      return DistributionPointName(
+          nameRelativeToCRLIssuer: Name.fromAsn1(
+              ASN1Parser(sequence.valueBytes()).nextObject() as ASN1Sequence));
+    } else {
+      throw Exception('Unknown Tag');
+    }
+  }
+
+  @override
+  String toString() {
+    if (fullName != null) {
+      return fullName.toString();
+    } else if (nameRelativeToCRLIssuer != null) {
+      return nameRelativeToCRLIssuer.toString();
+    } else {
+      return '';
+    }
   }
 }
 
@@ -650,7 +727,7 @@ class QCStatements extends ExtensionValue {
 
 class AccessDescription {
   final ObjectIdentifier? accessMethod;
-  final String? accessLocation;
+  final GeneralName? accessLocation;
 
   AccessDescription({this.accessLocation, this.accessMethod});
 
@@ -661,7 +738,7 @@ class AccessDescription {
   factory AccessDescription.fromAsn1(ASN1Sequence sequence) {
     return AccessDescription(
         accessMethod: toDart(sequence.elements[0]),
-        accessLocation: toDart(sequence.elements[1]));
+        accessLocation: GeneralName.fromAsn1(sequence.elements[1]));
   }
 }
 

@@ -3,17 +3,19 @@
 
 library x509;
 
+import 'dart:convert';
 import 'dart:developer';
+import 'dart:typed_data';
 
 import 'package:asn1lib/asn1lib.dart';
-import 'dart:convert';
-import 'package:quiver/core.dart';
-import 'package:quiver/collection.dart';
-import 'dart:typed_data';
 import 'package:crypto_keys/crypto_keys.dart';
-export 'package:crypto_keys/crypto_keys.dart';
+import 'package:quiver/collection.dart';
+import 'package:quiver/core.dart';
+import 'package:x509b/src/certificate_revocation_list.dart';
 
 import 'util.dart';
+
+export 'package:crypto_keys/crypto_keys.dart';
 
 part 'certificate.dart';
 part 'extension.dart';
@@ -21,7 +23,7 @@ part 'objectidentifier.dart';
 part 'request.dart';
 
 class Name {
-  final List<Map<ObjectIdentifier?, dynamic>> names;
+  final List<Map<ObjectIdentifier, dynamic>> names;
 
   const Name(this.names);
 
@@ -42,7 +44,7 @@ class Name {
   /// AttributeValue ::= ANY -- DEFINED BY AttributeType
   factory Name.fromAsn1(ASN1Sequence sequence) {
     return Name(sequence.elements.map((ASN1Object set) {
-      return <ObjectIdentifier?, dynamic>{
+      return <ObjectIdentifier, dynamic>{
         for (var p in (set as ASN1Set).elements)
           toDart((p as ASN1Sequence).elements[0]): toDart(p.elements[1])
       };
@@ -54,7 +56,9 @@ class Name {
     names.forEach((n) {
       var set = ASN1Set();
       n.forEach((k, v) {
-        set.add(ASN1Sequence()..add(fromDart(k))..add(fromDart(v)));
+        set.add(ASN1Sequence()
+          ..add(fromDart(k))
+          ..add(fromDart(v, k)));
       });
       seq.add(set);
     });
@@ -78,7 +82,9 @@ class Validity {
       );
 
   ASN1Sequence toAsn1() {
-    return ASN1Sequence()..add(fromDart(notBefore))..add(fromDart(notAfter));
+    return ASN1Sequence()
+      ..add(fromDart(notBefore))
+      ..add(fromDart(notAfter));
   }
 
   @override
@@ -92,7 +98,7 @@ class Validity {
 
 class SubjectPublicKeyInfo {
   final AlgorithmIdentifier algorithm;
-  final PublicKey subjectPublicKey;
+  final PublicKeyData subjectPublicKey;
 
   SubjectPublicKeyInfo(this.algorithm, this.subjectPublicKey);
 
@@ -100,22 +106,23 @@ class SubjectPublicKeyInfo {
     final algorithm =
         AlgorithmIdentifier.fromAsn1(sequence.elements[0] as ASN1Sequence);
     return SubjectPublicKeyInfo(algorithm,
-        publicKeyFromAsn1(sequence.elements[1] as ASN1BitString, algorithm));
+        getPublicKeyFromAsn1(sequence.elements[1] as ASN1BitString, algorithm));
   }
 
   @override
   String toString([String prefix = '']) {
     var buffer = StringBuffer();
     buffer.writeln('${prefix}Public Key Algorithm: $algorithm');
-    buffer.writeln('${prefix}RSA Public Key:');
-    buffer.writeln(keyToString(subjectPublicKey, '$prefix\t'));
+    buffer.writeln('${prefix}Public Key:');
+    buffer.writeln(toHexString(
+        toBigInt(subjectPublicKey.publicKeyDer), '${prefix}\t', 15));
     return buffer.toString();
   }
 
   ASN1Sequence toAsn1() {
     return ASN1Sequence()
       ..add(algorithm.toAsn1())
-      ..add(keyToAsn1(subjectPublicKey));
+      ..add(ASN1BitString(subjectPublicKey.publicKeyDer));
   }
 }
 
@@ -140,7 +147,14 @@ class AlgorithmIdentifier {
 
   ASN1Sequence toAsn1() {
     var seq = ASN1Sequence()..add(fromDart(algorithm));
-    seq.add(fromDart(parameters));
+    //using ed or x keys no parameters needed (do not add null) (RFC8410)
+    if (algorithm != ObjectIdentifier([1, 3, 101, 113]) &&
+        algorithm != ObjectIdentifier([1, 3, 101, 112]) &&
+        algorithm != ObjectIdentifier([1, 3, 101, 111]) &&
+        algorithm != ObjectIdentifier([1, 3, 101, 110]) &&
+        algorithm != ObjectIdentifier([1, 2, 840, 10045, 4, 3, 2])) {
+      seq.add(fromDart(parameters));
+    }
     return seq;
   }
 
@@ -238,6 +252,8 @@ Object _parseDer(List<int> bytes, String? type) {
       return X509Certificate.fromAsn1(s);
     case 'CERTIFICATE REQUEST':
       return CertificationRequest.fromAsn1(s);
+    case 'X509 CRL':
+      return CertificateRevocationList.fromAsn1(s);
   }
   throw FormatException('Could not parse PEM');
 }

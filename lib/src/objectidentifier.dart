@@ -46,7 +46,7 @@ class ObjectIdentifier {
       bytes.addAll(w.skip(1).toList().reversed.map((v) => v + 128));
       bytes.add(w.first);
     }
-    return ASN1ObjectIdentifier(bytes);
+    return ASN1ObjectIdentifier(nodes);
   }
 
   @override
@@ -131,10 +131,7 @@ class ObjectIdentifier {
             },
             4: {
               null: 'signatures',
-              3: {
-                null: 'ecdsa-with-SHA2',
-                2: 'ecdsa-with-SHA256'
-              }
+              3: {null: 'ecdsa-with-SHA2', 2: 'ecdsa-with-SHA256'}
             }
           },
           113549: {
@@ -235,23 +232,23 @@ class ObjectIdentifier {
           null: 'dod',
           1: {
             null: 'internet',
-            4:{
+            4: {
               null: 'private',
               1: {
                 null: 'enterprise',
-                0:{
-                1847: {
-                  null: 'jointResearchCentre',
-                  2021: {
-                    null: 'covid19',
-                    1: {
-                      null: 'issuers',
-                      1: 'Test Issuers',
-                      2: 'Vaccination Issuers',
-                      3: 'Recovery Issuers'
+                0: {
+                  1847: {
+                    null: 'jointResearchCentre',
+                    2021: {
+                      null: 'covid19',
+                      1: {
+                        null: 'issuers',
+                        1: 'Test Issuers',
+                        2: 'Vaccination Issuers',
+                        3: 'Recovery Issuers'
+                      },
                     },
                   },
-                },
                 },
               },
             },
@@ -384,6 +381,7 @@ class ObjectIdentifier {
             }
           }
         },
+        101: {110: 'X25519', 111: 'X448', 112: 'Ed25519', 113: 'Ed448'},
         132: {
           null: 'certicom',
           0: {
@@ -502,16 +500,13 @@ class ObjectIdentifier {
               },
               2: {null: 'netscape-data-type', 5: 'netscape-cert-sequence'}
             },
-            101:{
+            101: {
               null: "gov",
-              3:{
+              3: {
                 null: "csor",
-                4:{
+                4: {
                   null: "nistAlgorithms",
-                  2: {
-                    null: "hashalgs",
-                    1: "sha256"
-                  }
+                  2: {null: "hashalgs", 1: "sha256"}
                 }
               }
             }

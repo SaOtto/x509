@@ -1,6 +1,7 @@
 library x509.conversions;
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:asn1lib/asn1lib.dart';
 import 'package:crypto_keys/crypto_keys.dart' hide AlgorithmIdentifier;
@@ -58,7 +59,7 @@ KeyPair ecKeyPairFromAsn1(ASN1Sequence sequence) {
     // https://tools.ietf.org/html/rfc5480#section-2.2
     // ECPoint ::= OCTET STRING
 
-    publicKey = ecPublicKeyFromAsn1(e, curve: curve);
+    publicKey = ecPublicKeyFromAsn1(e.contentBytes(), curve: curve);
   }
 
   return KeyPair(
@@ -123,8 +124,7 @@ Identifier _lengthToCurve(int l) {
   throw UnsupportedError('No matching curve for length $l');
 }
 
-EcPublicKey ecPublicKeyFromAsn1(ASN1BitString bitString, {Identifier? curve}) {
-  var bytes = bitString.contentBytes();
+EcPublicKey ecPublicKeyFromAsn1(Uint8List bytes, {Identifier? curve}) {
   var compression = bytes[0];
   switch (compression) {
     case 4:
@@ -157,14 +157,29 @@ KeyPair keyPairFromAsn1(ASN1BitString data, ObjectIdentifier algorithm) {
   throw UnimplementedError('Unknown algoritmh $algorithm');
 }
 
-PublicKey publicKeyFromAsn1(ASN1BitString data, AlgorithmIdentifier algorithm) {
-  switch (algorithm.algorithm.name) {
+class PublicKeyData {
+  String algorithm;
+  List<int> publicKeyDer;
+  dynamic parameters;
+
+  PublicKeyData(this.algorithm, this.publicKeyDer, [this.parameters]);
+}
+
+PublicKeyData getPublicKeyFromAsn1(
+    ASN1BitString data, AlgorithmIdentifier algorithm) {
+  return PublicKeyData(
+      algorithm.algorithm.name, data.contentBytes(), algorithm.parameters);
+}
+
+PublicKey publicKeyFromAsn1(Uint8List data, String algorithm,
+    [dynamic parameters]) {
+  switch (algorithm) {
     case 'rsaEncryption':
-      var s = ASN1Parser(data.contentBytes()).nextObject() as ASN1Sequence;
+      var s = ASN1Parser(data).nextObject() as ASN1Sequence;
       return rsaPublicKeyFromAsn1(s);
     case 'ecPublicKey':
       return ecPublicKeyFromAsn1(data,
-          curve: _curveObjectIdentifierToIdentifier(algorithm.parameters));
+          curve: _curveObjectIdentifierToIdentifier(parameters));
     case 'sha1WithRSAEncryption':
   }
   throw UnimplementedError('Unknown algoritmh $algorithm');
@@ -185,7 +200,9 @@ String keyToString(Key key, [String prefix = '']) {
 ASN1BitString keyToAsn1(Key key) {
   var s = ASN1Sequence();
   if (key is RsaPublicKey) {
-    s..add(ASN1Integer(key.modulus))..add(ASN1Integer(key.exponent));
+    s
+      ..add(ASN1Integer(key.modulus))
+      ..add(ASN1Integer(key.exponent));
   }
   return ASN1BitString(s.encodedBytes);
 }
@@ -215,7 +232,7 @@ ASN1BitString keyPairToAsn1(KeyPair keyPair) {
   return ASN1BitString(s.encodedBytes);
 }
 
-ASN1Object fromDart(dynamic obj) {
+ASN1Object fromDart(dynamic obj, [ObjectIdentifier? identifier]) {
   if (obj == null) return ASN1Null();
   if (obj is List<int>) return ASN1BitString(obj);
   if (obj is List) {
@@ -232,8 +249,33 @@ ASN1Object fromDart(dynamic obj) {
   if (obj is int) return ASN1Integer(BigInt.from(obj));
   if (obj is ObjectIdentifier) return obj.toAsn1();
   if (obj is bool) return ASN1Boolean(obj);
-  if (obj is String) return ASN1PrintableString(obj);
-  if (obj is DateTime) return ASN1UtcTime(obj);
+  if (obj is String) {
+    if (identifier != null) {
+      if (identifier == ObjectIdentifier([1, 2, 840, 113549, 1, 9, 1])) {
+        return ASN1IA5String(obj);
+      } else if (identifier == ObjectIdentifier([2, 5, 4, 6])) {
+        return ASN1PrintableString(obj);
+      } else {
+        return ASN1UTF8String(obj);
+      }
+    } else {
+      return ASN1UTF8String(obj);
+    }
+  }
+  if (obj is DateTime) {
+    if (obj.year > 2049) {
+      var utc = obj.toUtc();
+      var day = utc.day.toString().padLeft(2, '0');
+      var month = utc.month.toString().padLeft(2, '0');
+      var year = utc.year.toString();
+      var minute = utc.minute.toString().padLeft(2, '0');
+      var hour = utc.hour.toString().padLeft(2, '0');
+      var second = utc.second.toString().padLeft(2, '0');
+      var bytes = ascii.encode('$year$month$day$hour$minute${second}Z');
+      return ASN1Object.preEncoded(0x18, bytes);
+    } else
+      return ASN1UtcTime(obj);
+  }
 
   throw ArgumentError.value(obj, 'obj', 'cannot be encoded as ASN1Object');
 }
@@ -249,6 +291,7 @@ dynamic toDart(ASN1Object obj) {
   if (obj is ASN1OctetString) return obj.stringValue;
   if (obj is ASN1PrintableString) return obj.stringValue;
   if (obj is ASN1UtcTime) return obj.dateTimeValue;
+  if (obj is ASN1GeneralizedTime) return obj.dateTimeValue;
   if (obj is ASN1IA5String) return obj.stringValue;
   if (obj is ASN1UTF8String) return obj.utf8StringValue;
   switch (obj.tag) {

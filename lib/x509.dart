@@ -3,4 +3,6 @@
 
 library x509;
 
+export 'src/certificate_revocation_list.dart';
+export 'src/verification.dart';
 export 'src/x509_base.dart';

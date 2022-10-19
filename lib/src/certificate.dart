@@ -3,7 +3,7 @@ part of x509;
 /// A Certificate.
 abstract class Certificate {
   /// The public key from this certificate.
-  PublicKey get publicKey;
+  PublicKeyData get publicKey;
 }
 
 /// A X.509 Certificate
@@ -16,7 +16,7 @@ class X509Certificate implements Certificate {
   final List<int>? signatureValue;
 
   @override
-  PublicKey get publicKey =>
+  PublicKeyData get publicKey =>
       tbsCertificate.subjectPublicKeyInfo!.subjectPublicKey;
 
   const X509Certificate(
@@ -64,7 +64,7 @@ class TbsCertificate {
   final int? version;
 
   /// The serial number of the certificate.
-  final int? serialNumber;
+  final BigInt? serialNumber;
 
   /// The signature of the certificate.
   final AlgorithmIdentifier? signature;
@@ -89,6 +89,8 @@ class TbsCertificate {
   /// List of extensions.
   final List<Extension>? extensions;
 
+  final Uint8List? encodedBytes;
+
   const TbsCertificate(
       {this.version,
       this.serialNumber,
@@ -99,7 +101,8 @@ class TbsCertificate {
       this.subjectPublicKeyInfo,
       this.issuerUniqueID,
       this.subjectUniqueID,
-      this.extensions});
+      this.extensions,
+      this.encodedBytes});
 
   /// Creates a to-be-signed certificate from an [ASN1Sequence].
   ///
@@ -161,7 +164,7 @@ class TbsCertificate {
 
     return TbsCertificate(
         version: version,
-        serialNumber: (elements[0] as ASN1Integer).valueAsBigInteger!.toInt(),
+        serialNumber: (elements[0] as ASN1Integer).valueAsBigInteger!,
         signature: AlgorithmIdentifier.fromAsn1(elements[1] as ASN1Sequence),
         issuer: Name.fromAsn1(elements[2] as ASN1Sequence),
         validity: Validity.fromAsn1(elements[3] as ASN1Sequence),
@@ -170,7 +173,8 @@ class TbsCertificate {
             SubjectPublicKeyInfo.fromAsn1(elements[5] as ASN1Sequence),
         issuerUniqueID: iUid,
         subjectUniqueID: sUid,
-        extensions: ex);
+        extensions: ex,
+        encodedBytes: sequence.encodedBytes);
   }
 
   ASN1Sequence toAsn1() {
@@ -198,6 +202,18 @@ class TbsCertificate {
         // var iuid = ASN1BitString.fromBytes(issuerUniqueID);
         //ASN1Object.preEncoded(tag, valBytes)
       }
+    }
+    if (extensions != null && extensions!.isNotEmpty) {
+      var extSeq = ASN1Sequence();
+      for (var ext in extensions!) {
+        extSeq.add(ext.toAsn1());
+      }
+      var o = ASN1Object.preEncoded(0xa3, extSeq.encodedBytes);
+      var b = o.encodedBytes
+        ..setRange(o.encodedBytes.length - extSeq.encodedBytes.length,
+            o.encodedBytes.length, extSeq.encodedBytes);
+      o = ASN1Object.fromBytes(b);
+      seq.add(o);
     }
     return seq;
   }
