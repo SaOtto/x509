@@ -53,7 +53,7 @@ class X509Certificate implements Certificate {
     buffer.writeln('\tData:');
     buffer.writeln(tbsCertificate.toString('\t\t'));
     buffer.writeln('\tSignature Algorithm: $signatureAlgorithm');
-    buffer.writeln(toHexString(toBigInt(signatureValue!), '${prefix}\t\t', 18));
+    buffer.writeln(toHexString(toBigInt(signatureValue!), '$prefix\t\t', 18));
     return buffer.toString();
   }
 }
@@ -137,7 +137,7 @@ class TbsCertificate {
     if (elements.first.tag == 0xa0) {
       var e =
           ASN1Parser(elements.first.valueBytes()).nextObject() as ASN1Integer;
-      version = e.valueAsBigInteger!.toInt() + 1;
+      version = e.valueAsBigInteger.toInt() + 1;
       elements = elements.skip(1).toList();
     }
     var optionals = elements.skip(6);
@@ -154,7 +154,7 @@ class TbsCertificate {
             sUid = o.contentBytes();
             break;
           case 3:
-            ex = (ASN1Parser(o.contentBytes()!).nextObject() as ASN1Sequence)
+            ex = (ASN1Parser(o.contentBytes()).nextObject() as ASN1Sequence)
                 .elements
                 .map((v) => Extension.fromAsn1(v as ASN1Sequence))
                 .toList();
@@ -164,7 +164,7 @@ class TbsCertificate {
 
     return TbsCertificate(
         version: version,
-        serialNumber: (elements[0] as ASN1Integer).valueAsBigInteger!,
+        serialNumber: (elements[0] as ASN1Integer).valueAsBigInteger,
         signature: AlgorithmIdentifier.fromAsn1(elements[1] as ASN1Sequence),
         issuer: Name.fromAsn1(elements[2] as ASN1Sequence),
         validity: Validity.fromAsn1(elements[3] as ASN1Sequence),
@@ -221,19 +221,19 @@ class TbsCertificate {
   @override
   String toString([String prefix = '']) {
     var buffer = StringBuffer();
-    buffer.writeln('${prefix}Version: ${version}');
-    buffer.writeln('${prefix}Serial Number: ${serialNumber}');
-    buffer.writeln('${prefix}Signature Algorithm: ${signature}');
-    buffer.writeln('${prefix}Issuer: ${issuer}');
+    buffer.writeln('${prefix}Version: $version');
+    buffer.writeln('${prefix}Serial Number: $serialNumber');
+    buffer.writeln('${prefix}Signature Algorithm: $signature');
+    buffer.writeln('${prefix}Issuer: $issuer');
     buffer.writeln('${prefix}Validity:');
     buffer.writeln(validity?.toString('$prefix\t') ?? '');
-    buffer.writeln('${prefix}Subject: ${subject}');
+    buffer.writeln('${prefix}Subject: $subject');
     buffer.writeln('${prefix}Subject Public Key Info:');
-    buffer.writeln(subjectPublicKeyInfo?.toString('${prefix}\t') ?? '');
+    buffer.writeln(subjectPublicKeyInfo?.toString('$prefix\t') ?? '');
     if (extensions != null && extensions!.isNotEmpty) {
       buffer.writeln('${prefix}X509v3 extensions:');
       for (var e in extensions!) {
-        buffer.writeln(e.toString('${prefix}\t'));
+        buffer.writeln(e.toString('$prefix\t'));
       }
     }
     return buffer.toString();

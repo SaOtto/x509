@@ -90,8 +90,8 @@ class Validity {
   @override
   String toString([String prefix = '']) {
     var buffer = StringBuffer();
-    buffer.writeln('${prefix}Not Before: ${notBefore}');
-    buffer.writeln('${prefix}Not After: ${notAfter}');
+    buffer.writeln('${prefix}Not Before: $notBefore');
+    buffer.writeln('${prefix}Not After: $notAfter');
     return buffer.toString();
   }
 }
@@ -115,7 +115,7 @@ class SubjectPublicKeyInfo {
     buffer.writeln('${prefix}Public Key Algorithm: $algorithm');
     buffer.writeln('${prefix}Public Key:');
     buffer.writeln(toHexString(
-        toBigInt(subjectPublicKey.publicKeyDer), '${prefix}\t', 15));
+        toBigInt(subjectPublicKey.publicKeyDer), '$prefix\t', 15));
     return buffer.toString();
   }
 
@@ -160,7 +160,7 @@ class AlgorithmIdentifier {
 
   @override
   String toString() =>
-      "${algorithm}${parameters == null ? "" : "($parameters)"}";
+      "$algorithm${parameters == null ? "" : "($parameters)"}";
 }
 
 class PrivateKeyInfo {
@@ -184,7 +184,7 @@ class PrivateKeyInfo {
         algorithm,
         keyPairFromAsn1(
             ASN1BitString(
-                (sequence.elements[2] as ASN1OctetString).contentBytes()!),
+                (sequence.elements[2] as ASN1OctetString).contentBytes()),
             algorithm.algorithm));
   }
 }
@@ -203,7 +203,7 @@ class EncryptedPrivateKeyInfo {
     final algorithm =
         AlgorithmIdentifier.fromAsn1(sequence.elements[0] as ASN1Sequence);
     return EncryptedPrivateKeyInfo(
-        algorithm, (sequence.elements[1] as ASN1OctetString).contentBytes()!);
+        algorithm, (sequence.elements[1] as ASN1OctetString).contentBytes());
   }
 }
 

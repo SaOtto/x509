@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:asn1lib/asn1lib.dart';
-import 'package:crypto_keys/crypto_keys.dart' hide AlgorithmIdentifier;
 
 import '../x509.dart';
 
@@ -38,9 +37,9 @@ KeyPair ecKeyPairFromAsn1(ASN1Sequence sequence) {
     throw UnsupportedError('Only `ecPrivkeyVer1` supported.');
   }
 
-  var privateKey = toBigInt(sequence.elements[1].contentBytes()!);
+  var privateKey = toBigInt(sequence.elements[1].contentBytes());
 
-  var l = sequence.elements[1].contentBytes()!.length;
+  var l = sequence.elements[1].contentBytes().length;
 
   Identifier? curve;
 
@@ -54,7 +53,7 @@ KeyPair ecKeyPairFromAsn1(ASN1Sequence sequence) {
 
   var publicKey;
   if (sequence.elements.length > i && sequence.elements[i].tag == 0xa1) {
-    var e = ASN1Parser(sequence.elements[i].contentBytes()!).nextObject()
+    var e = ASN1Parser(sequence.elements[i].contentBytes()).nextObject()
         as ASN1BitString;
     // https://tools.ietf.org/html/rfc5480#section-2.2
     // ECPoint ::= OCTET STRING
@@ -71,7 +70,7 @@ Identifier? _curveObjectIdentifierToIdentifier(ObjectIdentifier id) {
   var idName;
   try {
     idName = id.name;
-  } on StateError catch (e) {
+  } on StateError catch (_) {
     return null;
   }
 
@@ -82,7 +81,7 @@ Identifier? _curveObjectIdentifierToIdentifier(ObjectIdentifier id) {
     'secp521r1': curves.p521
   }[idName];
   if (curve == null) {
-    throw UnsupportedError('Curves of type ${id} not supported');
+    throw UnsupportedError('Curves of type $id not supported');
   }
   return curve;
 }
@@ -107,8 +106,8 @@ KeyPair rsaKeyPairFromAsn1(ASN1Sequence sequence) {
 }
 
 RsaPublicKey rsaPublicKeyFromAsn1(ASN1Sequence sequence) {
-  var modulus = (sequence.elements[0] as ASN1Integer).valueAsBigInteger!;
-  var exponent = (sequence.elements[1] as ASN1Integer).valueAsBigInteger!;
+  var modulus = (sequence.elements[0] as ASN1Integer).valueAsBigInteger;
+  var exponent = (sequence.elements[1] as ASN1Integer).valueAsBigInteger;
   return RsaPublicKey(modulus: modulus, exponent: exponent);
 }
 
@@ -306,8 +305,6 @@ dynamic toDart(ASN1Object obj) {
       return utf8.decode(obj.valueBytes());
   }
   return obj.valueBytes();
-  throw ArgumentError(
-      'Cannot convert $obj (${obj.runtimeType}) to dart object.');
 }
 
 String toHexString(BigInt v, [String prefix = '', int bytesPerLine = 15]) {

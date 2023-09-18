@@ -66,8 +66,6 @@ class ObjectIdentifier {
       return tree;
     } catch (e) {
       return nodes.toString();
-      throw StateError(
-          'Unable to get name of ObjectIdentifier with nodes $nodes');
     }
   }
 
@@ -377,6 +375,32 @@ class ObjectIdentifier {
                 2: 'rsaSignatureWithripemd160',
                 3: 'rsaSignatureWithripemd128',
                 4: 'rsaSignatureWithripemd256'
+              },
+              2: {
+                null: 'ecSign',
+                8: {
+                  null: 'ecStdCurvesAndGeneration',
+                  1: {
+                    null: 'ellipticCurve',
+                    1: {
+                      null: 'versionOne',
+                      1: 'brainpoolP160r1',
+                      2: 'brainpoolP160t1',
+                      3: 'brainpoolP192r1',
+                      4: 'brainpoolP192t1',
+                      5: 'brainpoolP224r1',
+                      6: 'brainpoolP224t1',
+                      7: 'brainpoolP256r1',
+                      8: 'brainpoolP256t1',
+                      9: 'brainpoolP320r1',
+                      10: 'brainpoolP320t1',
+                      11: 'brainpoolP384r1',
+                      12: 'brainpoolP384t1',
+                      13: 'brainpoolP512r1',
+                      14: 'brainpoolP512t1'
+                    }
+                  }
+                }
               }
             }
           }
@@ -480,11 +504,11 @@ class ObjectIdentifier {
         }
       },
       16: {
-        null: "country",
+        null: 'country',
         840: {
-          null: "us",
+          null: 'us',
           1: {
-            null: "organization",
+            null: 'organization',
             113730: {
               null: 'netscape',
               1: {
@@ -501,12 +525,12 @@ class ObjectIdentifier {
               2: {null: 'netscape-data-type', 5: 'netscape-cert-sequence'}
             },
             101: {
-              null: "gov",
+              null: 'gov',
               3: {
-                null: "csor",
+                null: 'csor',
                 4: {
-                  null: "nistAlgorithms",
-                  2: {null: "hashalgs", 1: "sha256"}
+                  null: 'nistAlgorithms',
+                  2: {null: 'hashalgs', 1: 'sha256'}
                 }
               }
             }

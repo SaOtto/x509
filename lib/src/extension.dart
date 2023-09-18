@@ -48,9 +48,9 @@ class Extension {
     return Extension(
         extnId: id,
         isCritical: critical,
-        extensionValueOctet: sequence.elements[octetIndex].contentBytes()!,
+        extensionValueOctet: sequence.elements[octetIndex].contentBytes(),
         extnValue: ExtensionValue.fromAsn1(
-            ASN1Parser(sequence.elements[octetIndex].contentBytes()!)
+            ASN1Parser(sequence.elements[octetIndex].contentBytes())
                 .nextObject(),
             id));
   }
@@ -58,8 +58,8 @@ class Extension {
   @override
   String toString([String prefix = '']) {
     var buffer = StringBuffer();
-    buffer.writeln("${prefix}$extnId: ${isCritical ? "critical" : ""}");
-    buffer.writeln('${prefix}\t$extnValue');
+    buffer.writeln("$prefix$extnId: ${isCritical ? "critical" : ""}");
+    buffer.writeln('$prefix\t$extnValue');
     return buffer.toString();
   }
 
@@ -332,15 +332,13 @@ class PrivateKeyUsagePeriod extends ExtensionValue {
     var notBefore;
     var notAfter;
     for (var o in sequence.elements) {
-      if (o is ASN1Object) {
-        var taggedObject = o;
-        if (taggedObject.tag == 128) {
-          notBefore =
-              ASN1GeneralizedTime.fromBytes(o.encodedBytes).dateTimeValue;
-        } else if (taggedObject.tag == 129) {
-          notAfter =
-              ASN1GeneralizedTime.fromBytes(o.encodedBytes).dateTimeValue;
-        }
+      var taggedObject = o;
+      if (taggedObject.tag == 128) {
+        notBefore =
+            ASN1GeneralizedTime.fromBytes(o.encodedBytes).dateTimeValue;
+      } else if (taggedObject.tag == 129) {
+        notAfter =
+            ASN1GeneralizedTime.fromBytes(o.encodedBytes).dateTimeValue;
       }
     }
     return PrivateKeyUsagePeriod(notBefore: notBefore, notAfter: notAfter);
@@ -371,7 +369,7 @@ class BasicConstraints extends ExtensionValue {
     int? len;
     for (var o in sequence.elements) {
       if (o is ASN1Boolean) {
-        cA = o.booleanValue!;
+        cA = o.booleanValue;
       }
       if (o is ASN1Integer) {
         len = o.intValue;
@@ -442,7 +440,7 @@ class PolicyInformation {
     var buffer = StringBuffer();
     buffer.writeln('${prefix}Policy: $policyIdentifier');
     buffer.writeln(
-        policyQualifiers.map((q) => q.toString('${prefix}\t')).join('\n'));
+        policyQualifiers.map((q) => q.toString('$prefix\t')).join('\n'));
     return buffer.toString();
   }
 }
@@ -488,7 +486,7 @@ class PolicyQualifierInfo {
         return '${prefix}CPS: $cpsUri';
       case 2: // unotice
         return '${prefix}User Notice:\n'
-            '${userNotice?.toString('${prefix}\t')}';
+            '${userNotice?.toString('$prefix\t')}';
     }
     throw UnsupportedError(
         'Policy qualifier id $policyQualifierId not supported');
@@ -817,7 +815,7 @@ class GeneralName {
     } else {
       contentsString = contents.toString();
     }
-    return '${_choiceName[choice]}:${contentsString}';
+    return '${_choiceName[choice]}:$contentsString';
   }
 }
 

@@ -66,7 +66,7 @@ class TbsCertificateList {
       var element = sequence.elements[5];
       if (element.tag == 0xa0) {
         //extensions
-        ex = (ASN1Parser(element.contentBytes()!).nextObject() as ASN1Sequence)
+        ex = (ASN1Parser(element.contentBytes()).nextObject() as ASN1Sequence)
             .elements
             .map((v) => Extension.fromAsn1(v as ASN1Sequence))
             .toList();
@@ -78,7 +78,7 @@ class TbsCertificateList {
         certs = {for (var item in tmp) item.userCertificate: item};
         if (sequence.elements.length == 7) {
           var element2 = sequence.elements[6];
-          ex = (ASN1Parser(element2.contentBytes()!).nextObject()
+          ex = (ASN1Parser(element2.contentBytes()).nextObject()
                   as ASN1Sequence)
               .elements
               .map((v) => Extension.fromAsn1(v as ASN1Sequence))
